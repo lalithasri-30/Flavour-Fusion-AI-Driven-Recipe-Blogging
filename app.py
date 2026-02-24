@@ -1,0 +1,102 @@
+import streamlit as st
+from google import genai
+from google import generativeai
+from dotenv import load_dotenv
+import random
+import os
+
+# -------------------------
+# Load ENV variables
+# -------------------------
+load_dotenv()
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    st.error("GEMINI_API_KEY not found in .env file")
+    st.stop()
+
+# Create client using ENV key (not hardcoded)
+client = genai.Client(api_key=API_KEY)
+
+# -------------------------
+# Generation config
+# -------------------------
+generation_config = {
+    "temperature": 0.75,
+    "top_p": 0.95,
+    "top_k": 64,
+    "max_output_tokens": 8192,
+}
+
+# -------------------------
+# Joke function
+# -------------------------
+def get_joke():
+    jokes = [
+        "Why don't programmers like nature? It has too many bugs.",
+        "Why do Java developers wear glasses? Because they don't see sharp.",
+        "How many programmers does it take to change a light bulb? None, that's a hardware problem.",
+        "Why did the developer go broke? Because he used up all his cache.",
+        "Why do programmers prefer dark mode? Because light attracts bugs!",
+    ]
+    return random.choice(jokes)
+
+# -------------------------
+# Recipe generator
+# -------------------------
+def generate_recipe(topic, word_count):
+    try:
+        st.write("🍽 Generating your recipe...")
+        st.write(f"🤖 Joke while you wait:\n\n{get_joke()}")
+
+        prompt = f"Write a recipe blog on '{topic}' with about {word_count} words."
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=generation_config
+        )
+
+        st.success("✅ Your recipe is ready!")
+        return response.text
+
+    except Exception as e:
+        st.error(f"Error generating blog: {e}")
+        return None
+
+# -------------------------
+# UI
+# -------------------------
+def main():
+    st.title("Flavour Fusion: AI-Driven Recipe Blogging 🍲🤖")
+
+    topic = st.text_input(
+        "Enter your recipe topic:",
+        placeholder="e.g., Vegan Chocolate Cake"
+    )
+
+    word_count = st.number_input(
+        "Word count:",
+        min_value=100,
+        max_value=2000,
+        step=100
+    )
+
+    if st.button("Generate Recipe"):
+        if topic:
+            recipe = generate_recipe(topic, word_count)
+
+            if recipe:
+                st.text_area("Generated Recipe:", recipe, height=300)
+
+                st.download_button(
+                    "Download Recipe",
+                    recipe,
+                    file_name=f"{topic}.txt"
+                )
+        else:
+            st.warning("Please enter a topic.")
+
+# -------------------------
+if __name__ == "__main__":
+    main()
